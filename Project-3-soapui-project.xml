@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<con:soapui-project id="4b48191d-f814-49d3-a3ff-0b83456e3675" activeEnvironment="Default" name="Project 3" resourceRoot="" soapui-version="5.6.0" abortOnError="false" runType="SEQUENTIAL" defaultScriptLanguage="Groovy" xmlns:con="http://eviware.com/soapui/config">
+<con:soapui-project id="4b48191d-f814-49d3-a3ff-0b83456e3675" activeEnvironment="Default" name="Project" resourceRoot="" soapui-version="5.6.0" abortOnError="false" runType="SEQUENTIAL" defaultScriptLanguage="Groovy" xmlns:con="http://eviware.com/soapui/config">
   <con:settings/>
   <con:interface xsi:type="con:WsdlInterface" id="08ced61f-9ace-436e-a657-fe1894ac7f90" wsaVersion="NONE" name="CalculatorSoap12" type="wsdl" bindingName="{http://tempuri.org/}CalculatorSoap12" soapVersion="1_2" anonymous="optional" definition="http://www.dneonline.com/calculator.asmx?wsdl" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <con:settings/>
@@ -3490,14 +3490,22 @@ assert result == '5'</scriptText>
         <con:settings/>
         <con:config xsi:type="con:JdbcRequestTestStep" convertColumnNamesToUpperCase="true" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
           <con:driver>com.microsoft.sqlserver.jdbc.SQLServerDriver</con:driver>
-          <con:connectionString>jdbc:sqlserver://localhost:1433;database=TestData;username=serverUserGL;password=serveruser1</con:connectionString>
+          <con:connectionString>${#Project#con}</con:connectionString>
           <con:query>SELECT TOP 1000 [id]
       ,[isoCode]
       ,[Name]
   FROM  [dbo.iso]
   </con:query>
           <con:assertion type="JDBC Status" id="5c57d6b4-4918-4f3c-b408-c06d3885d6b8" name="JDBC Status"/>
-          <con:assertion type="GroovyScriptAssertion" id="165838a5-ff5c-47ca-bbd7-cb13fc91345e" name="Script Assertion"><con:configuration/></con:assertion><con:properties/>
+          <con:assertion type="GroovyScriptAssertion" id="577054e8-2851-42bd-b211-364a28de5228" name="Script Assertion"><con:configuration/></con:assertion><con:assertion type="GroovyScriptAssertion" id="192d5892-f3f2-48e8-adcd-01a9d5e1c089" name="Script Assertion 1"><con:configuration><scriptText>import groovy.sql.*
+
+def conUrl= context.expand('${#Project#con}')
+def driver = context.expand('${#Project#driver}')
+log.info  conUrl
+com.eviware.soapui.support.GroovyUtils.registerJdbcDriver(driver)
+def baseCon =Sql.newInstance(conUrl,driver)
+
+</scriptText></con:configuration></con:assertion><con:properties/>
         </con:config>
       </con:testStep>
       <con:testStep type="transfer" name="Property Transfer" id="86e0c616-e3ba-4034-9732-f21992608c68">
@@ -3560,7 +3568,52 @@ assert result == '5'</scriptText>
    </soap:Body>\r
 </soap:Envelope>]]></con:request>
             <con:assertion type="SOAP Response" id="afed4e9c-5f1d-4393-80a1-4a1b7729fd63"/>
-            <con:credentials>
+            <con:assertion type="GroovyScriptAssertion" id="61d725aa-7399-46de-8779-3abd8ee34031" name="Script Assertion1"><con:configuration><scriptText>import groovy.sql.*
+import  com.eviware.soapui.support.XmlHolder 
+import java.util.*
+
+def conUrl= context.expand('${#Project#con}')
+def driver = context.expand('${#Project#driver}')
+com.eviware.soapui.support.GroovyUtils.registerJdbcDriver(driver)
+
+def query = context.expand('${#Project#isoCodesQeury1}')
+def baseCon =Sql.newInstance(conUrl,driver)
+def isoCodes=new ArrayList&lt;String>()
+baseCon.eachRow(query){row ->
+	isoCodes.add(row.isoCode)
+}
+
+def xmlResp = messageExchange.response.responseContent
+def xml= new XmlHolder(xmlResp)
+def isoResponse = xml.getNodeValue("// m:sISOCode")
+def assertIsoCode = isoCodes.contains(isoResponse)
+ log.info "isoCode from sql and from api response are the same, status:"+ assertIsoCode
+assert  assertIsoCode
+
+
+
+</scriptText></con:configuration></con:assertion><con:assertion type="GroovyScriptAssertion" id="de54577a-e049-4488-b92a-5669bd797ad1" name="Script Assertion2"><con:configuration><scriptText>import groovy.sql.*
+import  com.eviware.soapui.support.XmlHolder 
+import java.util.*
+
+def conUrl= context.expand('${#Project#con}')
+def driver = context.expand('${#Project#driver}')
+com.eviware.soapui.support.GroovyUtils.registerJdbcDriver(driver)
+
+def query = context.expand('${#Project#isoCodesQeury2}')
+def baseCon =Sql.newInstance(conUrl,driver)
+def names=new ArrayList&lt;String>()
+baseCon.eachRow(query){row ->
+	names.add(row.name)
+}
+
+def xmlResp = messageExchange.response.responseContent
+def xml= new XmlHolder(xmlResp)
+def nameResponse = xml.getNodeValue("//m:sName")
+def assertName = names.contains(nameResponse)
+ log.info "name from sql and from api response are the same, status:" + assertName
+assert  assertName
+</scriptText></con:configuration></con:assertion><con:credentials>
               <con:authType>No Authorization</con:authType>
             </con:credentials>
             <con:jmsConfig JMSDeliveryMode="PERSISTENT"/>
@@ -3591,7 +3644,7 @@ assert result == '5'</scriptText>
     </con:testCase>
     <con:properties/>
   </con:testSuite>
-  <con:properties><con:property><con:name>con</con:name><con:value>jdbc:sqlserver://localhost:1433;database=TestData;username=serverUserGL;password=serveruser1</con:value></con:property></con:properties>
+  <con:properties><con:property><con:name>con</con:name><con:value>jdbc:sqlserver://localhost:1433;database=TestData;username=serverUserGL;password=serveruser1</con:value></con:property><con:property><con:name>driver</con:name><con:value>com.microsoft.sqlserver.jdbc.SQLServerDriver</con:value></con:property><con:property><con:name>isoCodesQeury1</con:name><con:value>SELECT isoCode  FROM  dbo.iso</con:value></con:property><con:property><con:name>isoCodesQeury2</con:name><con:value>SELECT name  FROM  dbo.iso</con:value></con:property></con:properties>
   <con:wssContainer/>
   <con:oAuth2ProfileContainer/>
   <con:oAuth1ProfileContainer/>
